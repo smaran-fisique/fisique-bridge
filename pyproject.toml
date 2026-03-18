@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "fisique-bridge"
+version = "0.1.0"
+description = "ESSL fingerprint device bridge agent for Fisique Fitness"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "pyzk>=0.9",
+    "requests>=2.31",
+    "click>=8.1",
+    "schedule>=1.2",
+    "rich>=13.0",
+    "pystray>=0.19",
+    "pillow>=10.0",
+]
+
+[project.scripts]
+fisique-bridge = "bridge.cli:cli"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["bridge*"]
