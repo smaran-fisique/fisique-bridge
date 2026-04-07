@@ -253,14 +253,27 @@ class EnrollScreen(_Screen):
         m = self._selected()
         if not m:
             return
-        uid = m.get("device_user_id")
-        if not uid:
-            messagebox.showerror("No Device UID",
-                "This member has no device_user_id assigned.\nSet one in the web app first.")
-            return
-        name = m.get("name", f"ID {uid}")
-        self._status_var.set(f"Enrolling {name} — ask them to place their finger on the reader…")
+        name = m.get("name", "Member")
+        self._status_var.set(f"Preparing enrollment for {name}…")
+
         def _run():
+            preserve = config.get("wipe_preserve_uid") or 999
+            # If already assigned, re-enroll on the same UID
+            uid = m.get("device_user_id")
+            if not uid:
+                # Auto-assign next available UID on the device
+                try:
+                    existing = device.get_all_user_ids()
+                except Exception as e:
+                    self.after(0, lambda: self._status_var.set(f"Cannot reach device: {e}"))
+                    return
+                candidates = [u for u in existing if u != preserve]
+                uid = (max(candidates) + 1) if candidates else 1
+                if uid == preserve:
+                    uid += 1
+
+            self.after(0, lambda: self._status_var.set(
+                f"Enrolling {name} (UID {uid}) — ask them to place their finger on the reader…"))
             ok = device.enroll_user(user_id=int(uid), name=name)
             if ok:
                 api.confirm_enrollment(
@@ -268,9 +281,13 @@ class EnrollScreen(_Screen):
                     person_type=m.get("person_type", "member"),
                     device_user_id=int(uid),
                 )
-                self.after(0, lambda: self._status_var.set(f"Enrolled {name}."))
+                self.after(0, lambda: (
+                    self._status_var.set(f"Enrolled {name} as UID {uid}."),
+                    self._load(),
+                ))
             else:
                 self.after(0, lambda: self._status_var.set(f"Enrollment failed for {name}."))
+
         threading.Thread(target=_run, daemon=True).start()
 
     def _remove(self):
