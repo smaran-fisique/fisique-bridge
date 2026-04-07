@@ -237,6 +237,10 @@ def _open_status():
 
 def _build_menu(icon: pystray.Icon) -> pystray.Menu:
 
+    def on_dashboard(_):
+        from bridge import ui
+        threading.Thread(target=ui.open_dashboard, daemon=True).start()
+
     def on_status(_):
         threading.Thread(target=_open_status,   daemon=True).start()
 
@@ -257,11 +261,12 @@ def _build_menu(icon: pystray.Icon) -> pystray.Menu:
     return pystray.Menu(
         pystray.MenuItem("Fisique Bridge", None, enabled=False),
         pystray.Menu.SEPARATOR,
-        pystray.MenuItem("Status",   on_status),
-        pystray.MenuItem("Sync now", on_sync),
-        pystray.MenuItem("Settings", on_settings),
+        pystray.MenuItem("Open Dashboard", on_dashboard),
+        pystray.MenuItem("Status",         on_status),
+        pystray.MenuItem("Sync now",       on_sync),
+        pystray.MenuItem("Settings",       on_settings),
         pystray.Menu.SEPARATOR,
-        pystray.MenuItem("Quit",     on_quit),
+        pystray.MenuItem("Quit",           on_quit),
     )
 
 

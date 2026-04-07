@@ -25,7 +25,7 @@ def connect():
         timeout=10,
         password=cfg["device_password"],
         force_udp=False,
-        ommit_ping=False,
+        ommit_ping=True,
     )
     conn = None
     try:

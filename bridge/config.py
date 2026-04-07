@@ -12,8 +12,14 @@ DEFAULTS = {
     "device_password": 0,
     "web_app_url": "",
     "api_key": "",
+    "ep_active_members":     "/functions/v1/bridge-active-members",
+    "ep_all_members":        "/functions/v1/bridge-all-members",
+    "ep_confirm_enrollment": "/functions/v1/bridge-confirm-enrollment",
+    "ep_access_log":         "/functions/v1/bridge-access-log",
+    "ep_member_lookup":      "/functions/v1/bridge-member-lookup",
     "sync_hour": 2,          # 2 AM nightly sync
     "agent_port": 7474,      # local port bridge listens on
+    "wipe_preserve_uid": 999,
     "log_level": "INFO",
 }
 

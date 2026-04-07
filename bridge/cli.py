@@ -161,29 +161,31 @@ def run():
 # ── enroll ────────────────────────────────────────────────────────────────────
 
 @cli.command()
-@click.argument("member_id", type=int)
-def enroll(member_id: int):
+@click.argument("person_id")
+@click.argument("device_uid", type=int)
+@click.option("--person-type", default="member", show_default=True,
+              help="Person type: member | staff | trainer")
+def enroll(person_id: str, device_uid: int, person_type: str):
     """
-    Enroll a fingerprint for a member.
+    Enroll a fingerprint for a person.
 
-    MEMBER_ID is the member's ID from your web app.
+    PERSON_ID is the UUID from the web app. DEVICE_UID is the integer
+    slot to assign on the fingerprint reader.
 
-    Example: fisique-bridge enroll 42
+    Example: fisique-bridge enroll abc-123-uuid 42
     """
-    console.print(f"\n[bold]Enrolling fingerprint for member ID {member_id}[/bold]")
+    console.print(f"\n[bold]Enrolling fingerprint for {person_type} {person_id} → device UID {device_uid}[/bold]")
 
-    member = api.get_member_for_enrollment(member_id)
+    member = api.get_member_for_enrollment(person_id)
     if not member:
-        console.print(f"[red]Member {member_id} not found in web app[/red]")
+        console.print(f"[red]{person_type} {person_id} not found in web app[/red]")
         sys.exit(1)
 
-    name = member.get("name", f"Member {member_id}")
-    # Use member_id directly as device UID (keep it simple)
-    device_uid = member_id
+    name = member.get("name", f"ID {device_uid}")
 
-    console.print(f"Member: [cyan]{name}[/cyan]")
-    console.print(f"[dim]Device UID will be: {device_uid}[/dim]\n")
-    console.print("[yellow]Ask the member to place their finger on the reader now...[/yellow]")
+    console.print(f"Name: [cyan]{name}[/cyan]")
+    console.print(f"[dim]Device UID: {device_uid}[/dim]\n")
+    console.print("[yellow]Ask the person to place their finger on the reader now...[/yellow]")
 
     try:
         ok = device.enroll_user(user_id=device_uid, name=name)
@@ -192,10 +194,14 @@ def enroll(member_id: int):
         sys.exit(1)
 
     if ok:
-        api.confirm_enrollment(member_id=member_id, device_user_id=device_uid)
+        api.confirm_enrollment(
+            person_id=person_id,
+            person_type=person_type,
+            device_user_id=device_uid,
+        )
         console.print(f"[green]Enrollment complete for {name}[/green]\n")
     else:
-        console.print("[red]Enrollment did not complete — member may not have placed finger[/red]")
+        console.print("[red]Enrollment did not complete — person may not have placed finger[/red]")
         sys.exit(1)
 
 

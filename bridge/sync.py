@@ -46,7 +46,11 @@ def sync_users() -> dict:
 
     summary["checked"] = len(device_ids)
 
+    preserve_uid = config.get("wipe_preserve_uid") or 999
+
     for uid in device_ids:
+        if uid == preserve_uid:
+            continue
         if uid not in active_ids:
             log.info(f"Removing expired/inactive user uid={uid} from device")
             ok = device.delete_user(uid)

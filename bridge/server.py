@@ -138,6 +138,10 @@ class BridgeHandler(BaseHTTPRequestHandler):
             if not device_uid:
                 _json_response(self, 400, {"error": "device_user_id is required"})
                 return
+            preserve_uid = config.get("wipe_preserve_uid") or 999
+            if int(device_uid) == preserve_uid:
+                _json_response(self, 403, {"error": f"uid {preserve_uid} is reserved and cannot be deleted"})
+                return
             ok = device.delete_user(int(device_uid))
             _json_response(self, 200, {"deleted": ok})
 
