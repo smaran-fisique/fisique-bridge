@@ -311,7 +311,12 @@ class CheckinScreen(_Screen):
     def __init__(self, parent):
         super().__init__(parent)
         self._title("Check-in Display")
+        self._seen: set[str] = set()   # "uid|timestamp" keys already shown
+        self._member_map: dict[int, dict] = {}  # device_user_id → member
+        self._polling = True
         self._build()
+        self.after(100, self._init_poll)
+        self.bind("<Destroy>", lambda _: setattr(self, "_polling", False))
 
     def _build(self):
         card = tk.Frame(self, bg=CARD, padx=48, pady=48)
@@ -329,7 +334,8 @@ class CheckinScreen(_Screen):
         tk.Label(card, textvariable=self._time_var,
                  fg=FG2, bg=CARD, font=("Helvetica", 16)).pack(pady=(10, 0))
 
-        tk.Label(card, text="Place your finger on the reader",
+        self._status_var = tk.StringVar(value="Place your finger on the reader")
+        tk.Label(card, textvariable=self._status_var,
                  fg=FG2, bg=CARD, font=("Helvetica", 13)).pack(pady=(44, 0))
 
         self._tick()
@@ -338,14 +344,62 @@ class CheckinScreen(_Screen):
         self._time_var.set(datetime.now().strftime("%A, %d %B %Y  %I:%M:%S %p"))
         self.after(1000, self._tick)
 
+    def _init_poll(self):
+        """Seed _seen with whatever's already on the device so we don't replay old scans."""
+        def _seed():
+            try:
+                members = api.get_active_members()
+                self._member_map = {
+                    int(m["device_user_id"]): m
+                    for m in (members or [])
+                    if m.get("device_user_id")
+                }
+                existing = device.peek_attendance()
+                seed = {f"{r['device_user_id']}|{r['timestamp']}" for r in existing}
+                self._seen = seed
+                self.after(0, lambda: self._status_var.set("Place your finger on the reader"))
+            except Exception:
+                self._seen = set()
+            self._schedule_poll()
+        threading.Thread(target=_seed, daemon=True).start()
+
+    def _schedule_poll(self):
+        if self._polling:
+            self.after(4000, self._poll)
+
+    def _poll(self):
+        if not self._polling:
+            return
+        def _run():
+            try:
+                records = device.peek_attendance()
+                new = [r for r in records
+                       if f"{r['device_user_id']}|{r['timestamp']}" not in self._seen]
+                if new:
+                    # Show the most recent scan
+                    latest = max(new, key=lambda r: r["timestamp"])
+                    key = f"{latest['device_user_id']}|{latest['timestamp']}"
+                    self._seen.add(key)
+                    uid = int(latest["device_user_id"])
+                    m = self._member_map.get(uid)
+                    name = m["name"] if m else f"UID {uid}"
+                    granted = uid in self._member_map
+                    self.after(0, lambda: self.on_scan(name, granted))
+            except Exception:
+                pass
+            self._schedule_poll()
+        threading.Thread(target=_run, daemon=True).start()
+
     def on_scan(self, name: str, granted: bool):
-        """Call this when a scan event arrives to update the welcome board."""
         self._name_var.set(name)
         self._name_lbl.configure(fg=ACCENT if granted else RED)
-        self.after(5000, lambda: (
-            self._name_var.set("Waiting for scan…"),
-            self._name_lbl.configure(fg=FG),
-        ))
+        self._status_var.set("Welcome!" if granted else "Access denied")
+        self.after(5000, self._reset)
+
+    def _reset(self):
+        self._name_var.set("Waiting for scan…")
+        self._name_lbl.configure(fg=FG)
+        self._status_var.set("Place your finger on the reader")
 
 
 # ── Access Logs ───────────────────────────────────────────────────────────────

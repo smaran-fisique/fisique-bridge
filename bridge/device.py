@@ -101,6 +101,21 @@ def get_all_user_ids() -> list[int]:
         return [u.uid for u in users]
 
 
+def peek_attendance() -> list[dict]:
+    """
+    Read attendance records WITHOUT clearing the buffer.
+    Used by the check-in display to detect new scans in real time.
+    """
+    records = []
+    with connect() as conn:
+        for a in conn.get_attendance():
+            records.append({
+                "device_user_id": a.user_id,
+                "timestamp": a.timestamp.isoformat(),
+            })
+    return records
+
+
 def pull_attendance_logs() -> list[dict]:
     """
     Pull all attendance records from device and clear the buffer.
