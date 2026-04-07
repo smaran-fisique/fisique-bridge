@@ -74,14 +74,12 @@ def enroll_user(user_id: int, name: str, privilege: int = const.USER_DEFAULT) ->
         )
         log.info(f"User slot created on device: uid={user_id} name={name}")
 
-        # Trigger live enrollment — device LEDs will activate
-        result = conn.enroll_user(uid=user_id, temp_id=0)
-        if result:
-            log.info(f"Fingerprint enrolled for uid={user_id}")
-            return True
-        else:
-            log.warning(f"Enrollment returned no result for uid={user_id}")
-            return False
+        # Trigger live enrollment — device LEDs will activate.
+        # pyzk returns None on success so we can't rely on the return value;
+        # if no exception was raised the enrollment succeeded.
+        conn.enroll_user(uid=user_id, temp_id=0)
+        log.info(f"Fingerprint enrolled for uid={user_id}")
+        return True
 
 
 def delete_user(user_id: int) -> bool:
